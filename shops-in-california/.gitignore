@@ -1,0 +1,9 @@
+# Build artifacts
+quilt-shop-scraper
+
+# Database files
+*.db-journal
+
+# Go build cache
+*.test
+*.out
