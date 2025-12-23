@@ -5,7 +5,28 @@
 ![GitHub License](https://img.shields.io/github/license/fini-net/quilt-shop-proximity)
 ![GitHub watchers](https://img.shields.io/github/watchers/fini-net/quilt-shop-proximity)
 
-A good starting place for something. (TODO)
+Tools for finding and analyzing quilt shops by proximity.
+
+## Projects
+
+### California Quilt Shops
+
+See [shops-in-california/](shops-in-california/) for a Go application that scrapes California quilt shop data and stores it in a SQLite database.
+
+Quick start:
+
+```bash
+just deps
+just scrape
+just stats
+```
+
+## Features
+
+- Web scraping of quilt shop listings
+- SQLite database storage
+- Geographic proximity analysis (planned)
+- Command-line tools via `just` recipes
 
 ## Contributing
 
