@@ -11,14 +11,14 @@ list:
 	just --list
 	@echo "{{GREEN}}Your justfile is waiting for more scripts and snippets{{NORMAL}}"
 
-# build the Go application
+# build the Go application for California
 [group('build')]
-build:
+build-ca:
 	cd shops-in-california && go build -o quilt-shop-scraper main.go
 
 # download Go dependencies for California
 [group('build')]
-deps:
+deps-ca:
 	cd shops-in-california && go mod download && go mod tidy
 
 # download Go dependencies for Virginia
@@ -28,7 +28,7 @@ deps-va:
 
 # run the scraper to fetch and store California quilt shop data
 [group('run')]
-scrape:
+scrape-ca:
 	cd shops-in-california && go run main.go
 
 # run the scraper to fetch and store Virginia quilt shop data
@@ -38,7 +38,7 @@ scrape-va:
 
 # clean build artifacts and database for California
 [group('clean')]
-clean:
+clean-ca:
 	rm -f shops-in-california/quilt-shop-scraper shops-in-california/quilt_shops.db
 
 # clean build artifacts and database for Virginia
@@ -48,8 +48,8 @@ clean-va:
 
 # query the California database to show shop count by city
 [group('query')]
-stats:
-	@echo "{{BLUE}}Quilt shops by city:{{NORMAL}}"
+stats-ca:
+	@echo "{{BLUE}}Quilt shops by city (California):{{NORMAL}}"
 	@sqlite3 shops-in-california/quilt_shops.db "SELECT city, COUNT(*) as count FROM quilt_shops GROUP BY city ORDER BY count DESC LIMIT 20;" -header -column
 
 # query the Virginia database to show shop count by city
@@ -60,8 +60,8 @@ stats-va:
 
 # show all shops in a specific city (California)
 [group('query')]
-city CITY:
-	@echo "{{BLUE}}Quilt shops in {{CITY}}:{{NORMAL}}"
+city-ca CITY:
+	@echo "{{BLUE}}Quilt shops in {{CITY}} (California):{{NORMAL}}"
 	@sqlite3 shops-in-california/quilt_shops.db "SELECT name, address, phone, email FROM quilt_shops WHERE city = '{{CITY}}';" -header -column
 
 # show all shops in a specific city (Virginia)
