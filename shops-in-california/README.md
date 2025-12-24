@@ -14,17 +14,39 @@ A Go application that scrapes California quilt shop listings from ronatheribbite
 - Go 1.21 or later
 - Internet connection to fetch the quilt shop listings
 
-## Installation
+## Quick Start with Just Recipes
+
+From the repository root, use these `just` recipes:
 
 ```bash
-go mod download
+# Download Go dependencies
+just deps-ca
+
+# Run the scraper to fetch and store quilt shop data
+just scrape-ca
+
+# View statistics - count shops by city
+just stats-ca
+
+# Query shops in a specific city
+just city-ca "San Francisco"
+
+# Build the binary
+just build-ca
+
+# Clean build artifacts and database
+just clean-ca
 ```
 
-## Usage
+## Manual Usage
 
-Run the scraper to download quilt shop data and create the database:
+Alternatively, you can run commands directly from this directory:
 
 ```bash
+# Download dependencies
+go mod download
+
+# Run the scraper
 go run main.go
 ```
 
@@ -51,7 +73,21 @@ Indexes are created on `city` and `name` fields for efficient querying.
 
 ## Querying the Database
 
-You can query the database using any SQLite client:
+### Using Just Recipes (Recommended)
+
+From the repository root:
+
+```bash
+# View shop count by city
+just stats-ca
+
+# Find shops in a specific city
+just city-ca "Berkeley"
+```
+
+### Using SQLite Directly
+
+You can also query the database using any SQLite client:
 
 ```bash
 sqlite3 quilt_shops.db "SELECT * FROM quilt_shops WHERE city = 'berkeley';"
