@@ -16,9 +16,9 @@ See [shops-in-california/](shops-in-california/) for a Go application that scrap
 Quick start:
 
 ```bash
-just deps
-just scrape
-just stats
+just deps-ca
+just scrape-ca
+just stats-ca
 ```
 
 ### Virginia Quilt Shops
