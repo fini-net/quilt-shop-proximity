@@ -16,29 +16,56 @@ list:
 build:
 	cd shops-in-california && go build -o quilt-shop-scraper main.go
 
-# download Go dependencies
+# download Go dependencies for California
 [group('build')]
 deps:
 	cd shops-in-california && go mod download && go mod tidy
 
-# run the scraper to fetch and store quilt shop data
+# download Go dependencies for Virginia
+[group('build')]
+deps-va:
+	cd shops-in-virginia && go mod download && go mod tidy
+
+# run the scraper to fetch and store California quilt shop data
 [group('run')]
 scrape:
 	cd shops-in-california && go run main.go
 
-# clean build artifacts and database
+# run the scraper to fetch and store Virginia quilt shop data
+[group('run')]
+scrape-va:
+	cd shops-in-virginia && go run main.go
+
+# clean build artifacts and database for California
 [group('clean')]
 clean:
 	rm -f shops-in-california/quilt-shop-scraper shops-in-california/quilt_shops.db
 
-# query the database to show shop count by city
+# clean build artifacts and database for Virginia
+[group('clean')]
+clean-va:
+	rm -f shops-in-virginia/quilt-shop-scraper shops-in-virginia/quilt_shops.db shops-in-virginia/virginia-quilt-shops.pdf
+
+# query the California database to show shop count by city
 [group('query')]
 stats:
 	@echo "{{BLUE}}Quilt shops by city:{{NORMAL}}"
 	@sqlite3 shops-in-california/quilt_shops.db "SELECT city, COUNT(*) as count FROM quilt_shops GROUP BY city ORDER BY count DESC LIMIT 20;" -header -column
 
-# show all shops in a specific city
+# query the Virginia database to show shop count by city
+[group('query')]
+stats-va:
+	@echo "{{BLUE}}Quilt shops by city (Virginia):{{NORMAL}}"
+	@sqlite3 shops-in-virginia/quilt_shops.db "SELECT city, COUNT(*) as count FROM quilt_shops GROUP BY city ORDER BY count DESC LIMIT 20;" -header -column
+
+# show all shops in a specific city (California)
 [group('query')]
 city CITY:
 	@echo "{{BLUE}}Quilt shops in {{CITY}}:{{NORMAL}}"
 	@sqlite3 shops-in-california/quilt_shops.db "SELECT name, address, phone, email FROM quilt_shops WHERE city = '{{CITY}}';" -header -column
+
+# show all shops in a specific city (Virginia)
+[group('query')]
+city-va CITY:
+	@echo "{{BLUE}}Quilt shops in {{CITY}} (Virginia):{{NORMAL}}"
+	@sqlite3 shops-in-virginia/quilt_shops.db "SELECT name, address, phone, email, website FROM quilt_shops WHERE city = '{{CITY}}';" -header -column

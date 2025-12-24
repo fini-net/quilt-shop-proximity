@@ -21,6 +21,18 @@ just scrape
 just stats
 ```
 
+### Virginia Quilt Shops
+
+See [shops-in-virginia/](shops-in-virginia/) for a Go application that parses Virginia quilt shop data from VCQ PDF and stores it in a SQLite database.
+
+Quick start:
+
+```bash
+just deps-va
+just scrape-va
+just stats-va
+```
+
 ## Features
 
 - Web scraping of quilt shop listings
