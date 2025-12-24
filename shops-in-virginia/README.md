@@ -12,6 +12,10 @@ A Go application that parses Virginia quilt shop listings from the VCQ (Virginia
 ## Prerequisites
 
 - Go 1.21 or later
+- `pdftotext` command line tool (from poppler-utils package)
+  - macOS: `brew install poppler`
+  - Ubuntu/Debian: `apt-get install poppler-utils`
+  - Fedora: `dnf install poppler-utils`
 - Internet connection to fetch the quilt shop PDF
 
 ## Installation
@@ -84,8 +88,9 @@ SELECT name, city, website FROM quilt_shops WHERE website IS NOT NULL AND websit
 
 The application uses:
 
-- [ledongthuc/pdf](https://github.com/ledongthuc/pdf) for PDF text extraction
+- `pdftotext` command line tool for PDF text extraction (preserves line breaks better than Go PDF libraries)
 - [modernc.org/sqlite](https://gitlab.com/cznic/sqlite) for pure Go SQLite database
+- State machine parser to correctly identify city headers, shop names, addresses, and contact info
 
 ## License
 

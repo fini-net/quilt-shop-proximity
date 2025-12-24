@@ -23,7 +23,9 @@
       "WebFetch(domain:vcq.org)",
       "Bash(pdftotext:*)",
       "Bash(just scrape-va)",
-      "Bash(just city-va:*)"
+      "Bash(just city-va:*)",
+      "Bash(just clean-va:*)",
+      "Bash(just stats-va:*)"
     ],
     "deny": [],
     "ask": []

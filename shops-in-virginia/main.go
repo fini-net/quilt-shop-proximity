@@ -1,16 +1,18 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"database/sql"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"regexp"
 	"strings"
 
-	"github.com/ledongthuc/pdf"
 	_ "modernc.org/sqlite"
 )
 
@@ -79,36 +81,19 @@ func downloadPDF() error {
 	return err
 }
 
-// parseQuiltShopsPDF extracts text from the PDF and parses shop information
+// parseQuiltShopsPDF extracts text from the PDF using pdftotext and parses shop information
 func parseQuiltShopsPDF() ([]QuiltShop, error) {
-	f, r, err := pdf.Open(quiltShopsPDF)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open PDF: %w", err)
-	}
-	defer f.Close()
+	// Use pdftotext command line tool for better line break preservation
+	cmd := exec.Command("pdftotext", quiltShopsPDF, "-")
+	var out bytes.Buffer
+	cmd.Stdout = &out
 
-	var fullText strings.Builder
-	totalPages := r.NumPage()
-
-	// Extract text from all pages
-	for pageIndex := 1; pageIndex <= totalPages; pageIndex++ {
-		p := r.Page(pageIndex)
-		if p.V.IsNull() {
-			continue
-		}
-
-		text, err := p.GetPlainText(nil)
-		if err != nil {
-			log.Printf("Warning: failed to extract text from page %d: %v", pageIndex, err)
-			continue
-		}
-
-		fullText.WriteString(text)
-		fullText.WriteString("\n")
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("failed to run pdftotext: %w (make sure pdftotext is installed)", err)
 	}
 
 	// Parse the extracted text
-	return parseShopsFromText(fullText.String()), nil
+	return parseShopsFromText(out.String()), nil
 }
 
 // parseShopsFromText parses shop entries from the extracted text
@@ -116,151 +101,151 @@ func parseShopsFromText(text string) []QuiltShop {
 	var shops []QuiltShop
 
 	// Regular expressions for pattern matching
-	phoneRegex := regexp.MustCompile(`\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}(?:\s+extension\s+\d+)?`)
-	emailRegex := regexp.MustCompile(`[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}`)
-	websiteRegex := regexp.MustCompile(`(?i)(?:www\.[^\s]+|https?://[^\s]+)`)
-	cityStateZipRegex := regexp.MustCompile(`([A-Za-z\s]+),\s*VA\s+\d{5,6}`)
+	phoneRegex := regexp.MustCompile(`^\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}`)
+	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}`)
+	websiteRegex := regexp.MustCompile(`^(?:www\.|https?://)`)
+	cityStateZipRegex := regexp.MustCompile(`^(.+),\s*VA\s+\d{5,6}`)
 
-	// Known city names from the PDF - these appear before shop names
-	knownCities := map[string]bool{
-		"Alexandria": true, "Ashburn": true, "Brookneal": true, "Capron": true,
-		"Charlottesville": true, "Chesapeake": true, "Clifton Forge": true,
-		"Covington": true, "Crewe": true, "Culpeper": true, "Dayton": true,
-		"Fairfax": true, "Fairfield": true, "Forest": true, "Front Royal": true,
-		"Glen Allen": true, "Gloucester": true, "Hampton": true, "Harrisonburg": true,
-		"Herndon": true, "Leesburg": true, "Lynchburg": true, "Manassas": true,
-		"Martinsville": true, "Midlothian": true, "Newport News": true, "Norfolk": true,
-		"Orange": true, "Petersburg": true, "Portsmouth": true, "Powhatan": true,
-		"Purcellville": true, "Radford": true, "Richmond": true, "Roanoke": true,
-		"Smithfield": true, "Springfield": true, "Staunton": true, "Sterling": true,
-		"Suffolk": true, "Toano": true, "Vienna": true, "Vinton": true,
-		"Virginia Beach": true, "Warrenton": true, "Waynesboro": true, "Williamsburg": true,
-		"Winchester": true, "Woodbridge": true, "Yorktown": true,
+	// Skip patterns
+	skipPatterns := []string{
+		"Quilt Shops",
+		"2025-V1.0",
 	}
 
-	// Split into tokens
-	tokens := strings.Fields(text)
+	// Not city names - common words in descriptions that might look like cities
+	notCityNames := map[string]bool{
+		"Closed Sunday":    true,
+		"Events":           true,
+		"Hours":            true,
+		"Classes":          true,
+		"Services":         true,
+		"Machines":         true,
+		"Founded":          true,
+		"Located":          true,
+		"Open":             true,
+		"Spreading":        true,
+		"Emily Isaman":     true,
+		"Owner":            true,
+		"Becky Garriner":   true,
+		"Louann Gram":      true,
+		"Authorized":       true,
+	}
 
-	var i int
-	for i < len(tokens) {
+	// State machine states
+	const (
+		lookingForCity = iota
+		expectingShopName
+		collectingAddress
+		collectingContactInfo
+	)
+
+	scanner := bufio.NewScanner(strings.NewReader(text))
+	state := lookingForCity
+	var currentCity string
+	var currentShop *QuiltShop
+	var addressLines []string
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+
+		// Skip empty lines
+		if line == "" {
+			continue
+		}
+
 		// Skip headers
-		if tokens[i] == "Quilt" && i+1 < len(tokens) && tokens[i+1] == "Shops" {
-			i += 2
-			continue
-		}
-		if tokens[i] == "2025-V1.0" {
-			i++
-			continue
-		}
-
-		// Check if this is a city name
-		cityName := ""
-		tokensUsed := 0
-
-		// Try one-word city
-		if knownCities[tokens[i]] {
-			cityName = tokens[i]
-			tokensUsed = 1
-		} else if i+1 < len(tokens) {
-			// Try two-word city
-			twoWord := tokens[i] + " " + tokens[i+1]
-			if knownCities[twoWord] {
-				cityName = twoWord
-				tokensUsed = 2
-			}
-		}
-
-		if cityName == "" {
-			i++
-			continue
-		}
-
-		i += tokensUsed
-
-		// Now extract shop data
-		shop := QuiltShop{City: cityName}
-
-		// Collect tokens until we hit the next city name or city,state,zip pattern
-		var shopTokens []string
-		for i < len(tokens) {
-			// Check if we've hit the next city
-			if knownCities[tokens[i]] {
-				break
-			}
-			if i+1 < len(tokens) && knownCities[tokens[i]+" "+tokens[i+1]] {
-				break
-			}
-
-			shopTokens = append(shopTokens, tokens[i])
-			i++
-
-			// Check if we have enough tokens to form a complete shop
-			if len(shopTokens) > 50 {
+		skip := false
+		for _, pattern := range skipPatterns {
+			if line == pattern {
+				skip = true
 				break
 			}
 		}
-
-		// Parse the shop tokens
-		shopText := strings.Join(shopTokens, " ")
-
-		// Extract city, state, zip to find where address ends
-		cityStateZipMatches := cityStateZipRegex.FindStringIndex(shopText)
-		if cityStateZipMatches == nil {
-			continue // No valid address found
+		if skip {
+			continue
 		}
 
-		// Everything before city,state,zip is name + address
-		beforeCityStateZip := shopText[:cityStateZipMatches[0]]
-		afterCityStateZip := shopText[cityStateZipMatches[1]:]
+		// Check if this is city, state, zip - this marks end of address
+		if cityStateZipRegex.MatchString(line) {
+			if currentShop != nil && len(addressLines) > 0 {
+				currentShop.Address = strings.Join(addressLines, ", ")
+				addressLines = nil
+				state = collectingContactInfo
+			}
+			continue
+		}
 
-		// Split name from address - shop name is typically the first part
-		// until we hit something that looks like a street address
-		nameParts := []string{}
-		addressParts := []string{}
-		foundAddress := false
+		// Check if this is a phone number
+		if phoneRegex.MatchString(line) {
+			if currentShop != nil && currentShop.Phone == "" {
+				currentShop.Phone = line
+			}
+			continue
+		}
 
-		words := strings.Fields(beforeCityStateZip)
-		for _, word := range words {
-			// Check if this looks like start of address (number or common street indicators)
-			if !foundAddress && (regexp.MustCompile(`^\d+`).MatchString(word) ||
-				strings.HasSuffix(strings.ToLower(word), "shopping") ||
-				strings.HasSuffix(strings.ToLower(word), "centre,")) {
-				foundAddress = true
+		// Check if this is an email
+		if emailRegex.MatchString(line) {
+			if currentShop != nil && currentShop.Email == "" {
+				currentShop.Email = line
+			}
+			continue
+		}
+
+		// Check if this is a website
+		if websiteRegex.MatchString(line) {
+			if currentShop != nil && currentShop.Website == "" {
+				currentShop.Website = line
+			}
+			continue
+		}
+
+		// State machine logic
+		words := strings.Fields(line)
+		isShortTitleCase := len(words) <= 3 && len(words) > 0 &&
+			!strings.Contains(line, ",") &&
+			!regexp.MustCompile(`\d`).MatchString(line) &&
+			!strings.Contains(strings.ToLower(line), "suite") &&
+			!strings.Contains(strings.ToLower(line), "shopping") &&
+			len(line) > 0 && line[0] >= 'A' && line[0] <= 'Z'
+
+		switch state {
+		case lookingForCity, collectingContactInfo:
+			// We're looking for a city header or finished with a shop
+			if isShortTitleCase && !notCityNames[line] {
+				// Save previous shop if exists
+				if currentShop != nil && currentShop.Name != "" && currentShop.City != "" {
+					shops = append(shops, *currentShop)
+				}
+
+				currentCity = line
+				currentShop = nil
+				addressLines = nil
+				state = expectingShopName
+			} else if state == collectingContactInfo {
+				// This is extra info after contact info, ignore it
+				// Stay in collectingContactInfo state
 			}
 
-			if foundAddress {
-				addressParts = append(addressParts, word)
-			} else {
-				nameParts = append(nameParts, word)
+		case expectingShopName:
+			// The next line after a city header must be the shop name
+			currentShop = &QuiltShop{
+				Name: line,
+				City: currentCity,
 			}
+			state = collectingAddress
+
+		case collectingAddress:
+			// Collect address lines until we hit city,state,zip (handled above)
+			addressLines = append(addressLines, line)
 		}
+	}
 
-		shop.Name = strings.TrimSpace(strings.Join(nameParts, " "))
-		shop.Address = strings.TrimSpace(strings.Join(addressParts, " "))
-
-		// Remove trailing comma from address if present
-		shop.Address = strings.TrimSuffix(shop.Address, ",")
-
-		// Extract phone, email, website from after city,state,zip
-		phoneMatches := phoneRegex.FindAllString(afterCityStateZip, -1)
-		if len(phoneMatches) > 0 {
-			shop.Phone = phoneMatches[0]
+	// Don't forget the last shop
+	if currentShop != nil && currentShop.Name != "" && currentShop.City != "" {
+		if len(addressLines) > 0 {
+			currentShop.Address = strings.Join(addressLines, ", ")
 		}
-
-		emailMatches := emailRegex.FindAllString(afterCityStateZip, -1)
-		if len(emailMatches) > 0 {
-			shop.Email = emailMatches[0]
-		}
-
-		websiteMatches := websiteRegex.FindAllString(afterCityStateZip, -1)
-		if len(websiteMatches) > 0 {
-			shop.Website = websiteMatches[0]
-		}
-
-		// Only add if we have minimum required data
-		if shop.Name != "" && (shop.Phone != "" || shop.Email != "" || shop.Website != "") {
-			shops = append(shops, shop)
-		}
+		shops = append(shops, *currentShop)
 	}
 
 	return shops
