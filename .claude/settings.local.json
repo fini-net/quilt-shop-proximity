@@ -19,7 +19,11 @@
       "Bash(just scrape)",
       "Bash(just stats:*)",
       "Bash(just city:*)",
-      "Bash(just clean:*)"
+      "Bash(just clean:*)",
+      "WebFetch(domain:vcq.org)",
+      "Bash(pdftotext:*)",
+      "Bash(just scrape-va)",
+      "Bash(just city-va:*)"
     ],
     "deny": [],
     "ask": []
