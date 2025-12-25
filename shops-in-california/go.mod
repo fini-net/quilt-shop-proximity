@@ -4,8 +4,11 @@ go 1.21
 
 require (
 	github.com/PuerkitoBio/goquery v1.8.1
+	github.com/chicks-net/quilt-shop-proximity/geocode v0.0.0
 	modernc.org/sqlite v1.28.0
 )
+
+replace github.com/chicks-net/quilt-shop-proximity/geocode => ../geocode
 
 require (
 	github.com/andybalholm/cascadia v1.3.1 // indirect

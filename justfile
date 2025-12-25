@@ -69,3 +69,29 @@ city-ca CITY:
 city-va CITY:
 	@echo "{{BLUE}}Quilt shops in {{CITY}} (Virginia):{{NORMAL}}"
 	@sqlite3 shops-in-virginia/quilt_shops.db "SELECT name, address, phone, email, website FROM quilt_shops WHERE city = '{{CITY}}';" -header -column
+
+# geocode California quilt shops (add GPS coordinates)
+[group('geocode')]
+geocode-ca:
+	cd shops-in-california && go run main.go geocode
+
+# geocode Virginia quilt shops (add GPS coordinates)
+[group('geocode')]
+geocode-va:
+	cd shops-in-virginia && go run main.go geocode
+
+# geocode all shops (CA and VA)
+[group('geocode')]
+geocode-all: geocode-ca geocode-va
+
+# show geocoding statistics for California
+[group('geocode')]
+geocode-stats-ca:
+	@echo "{{BLUE}}Geocoding statistics (California):{{NORMAL}}"
+	@sqlite3 shops-in-california/quilt_shops.db "SELECT COUNT(*) as total, SUM(CASE WHEN latitude IS NOT NULL THEN 1 ELSE 0 END) as geocoded, SUM(CASE WHEN latitude IS NULL AND geocode_attempted_at IS NOT NULL THEN 1 ELSE 0 END) as failed FROM quilt_shops;" -header -column
+
+# show geocoding statistics for Virginia
+[group('geocode')]
+geocode-stats-va:
+	@echo "{{BLUE}}Geocoding statistics (Virginia):{{NORMAL}}"
+	@sqlite3 shops-in-virginia/quilt_shops.db "SELECT COUNT(*) as total, SUM(CASE WHEN latitude IS NOT NULL THEN 1 ELSE 0 END) as geocoded, SUM(CASE WHEN latitude IS NULL AND geocode_attempted_at IS NOT NULL THEN 1 ELSE 0 END) as failed FROM quilt_shops;" -header -column

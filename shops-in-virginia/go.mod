@@ -2,7 +2,12 @@ module shops-in-virginia
 
 go 1.21
 
-require modernc.org/sqlite v1.34.2
+require (
+	github.com/chicks-net/quilt-shop-proximity/geocode v0.0.0
+	modernc.org/sqlite v1.34.2
+)
+
+replace github.com/chicks-net/quilt-shop-proximity/geocode => ../geocode
 
 require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
