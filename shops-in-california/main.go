@@ -25,6 +25,9 @@ type QuiltShop struct {
 	Email   string
 }
 
+// seenShops tracks shops we've already added to prevent duplicates
+var seenShops = make(map[string]bool)
+
 func main() {
 	// Fetch the webpage
 	log.Println("Fetching quilt shops data...")
@@ -110,7 +113,10 @@ func fetchQuiltShops() ([]QuiltShop, error) {
 					}
 
 					shop := parseShopFromPre(pre.Text(), shopName, cityText)
-					if shop.Name != "" && (shop.Address != "" || shop.Phone != "") {
+					shopKey := strings.ToLower(shop.Name) + "|" + strings.ToLower(shop.City)
+
+					if shop.Name != "" && (shop.Address != "" || shop.Phone != "") && !seenShops[shopKey] {
+						seenShops[shopKey] = true
 						shops = append(shops, shop)
 					}
 				})
@@ -158,20 +164,23 @@ func parseShopFromPre(preText, shopName, city string) QuiltShop {
 
 		linesAfterShop++
 
-		// Stop after processing 3 lines after the shop name
-		if linesAfterShop > 3 {
+		// Stop after processing 4 lines after the shop name (increased from 3)
+		// Format is typically: address, phone, email, [optional website/notes]
+		if linesAfterShop > 4 {
 			break
 		}
 
-		// Classify this line
+		// Classify this line - order matters!
+		// Check email first (most specific pattern)
 		if isEmail(line) {
 			shop.Email = line
 		} else if isPhone(line) {
 			shop.Phone = line
 		} else if shop.Address == "" {
-			// Assume the first non-email, non-phone line is the address
+			// First non-email, non-phone line is the address
 			shop.Address = line
 		}
+		// Ignore subsequent lines that don't match known patterns
 	}
 
 	return shop
@@ -190,18 +199,22 @@ func isPhone(s string) bool {
 	cleaned = strings.ReplaceAll(cleaned, ")", "")
 	cleaned = strings.ReplaceAll(cleaned, " ", "")
 	cleaned = strings.ReplaceAll(cleaned, ".", "")
+	cleaned = strings.ReplaceAll(cleaned, "+", "") // International prefix
 
-	// Check if it starts with digits and has enough digits
-	if len(cleaned) >= 10 {
-		for i, c := range cleaned {
-			if i < 3 && (c < '0' || c > '9') {
-				return false
-			}
-		}
-		return true
+	// Phone number must be ONLY digits after cleaning
+	// Valid lengths: 10 (US), 11 (with country code)
+	if len(cleaned) < 10 || len(cleaned) > 11 {
+		return false
 	}
 
-	return false
+	// Every character must be a digit
+	for _, c := range cleaned {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+
+	return true
 }
 
 // createDatabase creates the SQLite database and populates it with shop data
