@@ -12,7 +12,9 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"time"
 
+	"github.com/chicks-net/quilt-shop-proximity/geocode"
 	_ "modernc.org/sqlite"
 )
 
@@ -33,6 +35,16 @@ type QuiltShop struct {
 }
 
 func main() {
+	// Check for geocode command
+	if len(os.Args) > 1 && os.Args[1] == "geocode" {
+		log.Println("Starting geocoding process...")
+		if err := geocodeShops(); err != nil {
+			log.Fatalf("Error geocoding shops: %v", err)
+		}
+		log.Println("Geocoding complete!")
+		return
+	}
+
 	// Download PDF if it doesn't exist
 	if _, err := os.Stat(quiltShopsPDF); os.IsNotExist(err) {
 		log.Println("Downloading Virginia quilt shops PDF...")
@@ -291,6 +303,108 @@ func createDatabase(shops []QuiltShop) error {
 	for _, shop := range shops {
 		if _, err := stmt.Exec(shop.Name, shop.Address, shop.City, shop.Phone, shop.Email, shop.Website); err != nil {
 			log.Printf("Warning: failed to insert shop %s: %v", shop.Name, err)
+		}
+	}
+
+	return nil
+}
+
+// geocodeShops adds GPS coordinates to shops in the database
+func geocodeShops() error {
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		return fmt.Errorf("failed to open database: %w", err)
+	}
+	defer db.Close()
+
+	// Apply schema migration
+	// SQLite doesn't support IF NOT EXISTS with ALTER TABLE, so we try to add columns
+	// and ignore errors if they already exist
+	db.Exec("ALTER TABLE quilt_shops ADD COLUMN latitude REAL")
+	db.Exec("ALTER TABLE quilt_shops ADD COLUMN longitude REAL")
+	db.Exec("ALTER TABLE quilt_shops ADD COLUMN geocode_attempted_at DATETIME")
+
+	// Create index for coordinates
+	if _, err := db.Exec("CREATE INDEX IF NOT EXISTS idx_coordinates ON quilt_shops(latitude, longitude)"); err != nil {
+		log.Printf("Warning: failed to create index: %v", err)
+	}
+
+	// Query shops that need geocoding
+	rows, err := db.Query(`
+		SELECT id, name, address, city
+		FROM quilt_shops
+		WHERE latitude IS NULL
+		ORDER BY id
+	`)
+	if err != nil {
+		return fmt.Errorf("failed to query shops: %w", err)
+	}
+	defer rows.Close()
+
+	// Collect shops to geocode
+	type shopToGeocode struct {
+		ID      int
+		Name    string
+		Address string
+		City    string
+	}
+	var shops []shopToGeocode
+	for rows.Next() {
+		var shop shopToGeocode
+		if err := rows.Scan(&shop.ID, &shop.Name, &shop.Address, &shop.City); err != nil {
+			log.Printf("Warning: failed to scan shop: %v", err)
+			continue
+		}
+		shops = append(shops, shop)
+	}
+
+	if len(shops) == 0 {
+		log.Println("No shops need geocoding. All done!")
+		return nil
+	}
+
+	log.Printf("Geocoding %d shops...\n", len(shops))
+
+	// Geocode each shop
+	for i, shop := range shops {
+		log.Printf("[%d/%d] %s", i+1, len(shops), shop.Name)
+
+		// Skip if no address
+		if shop.Address == "" {
+			log.Printf("       ⚠ Skipping - no address on file")
+			// Still update the attempted timestamp
+			db.Exec("UPDATE quilt_shops SET geocode_attempted_at = ? WHERE id = ?", time.Now(), shop.ID)
+			continue
+		}
+
+		// Normalize VA address - remove trailing commas and add city, state
+		fullAddress := strings.TrimSpace(shop.Address)
+		fullAddress = strings.TrimSuffix(fullAddress, ",")
+		fullAddress = fmt.Sprintf("%s, %s, VA", fullAddress, shop.City)
+
+		log.Printf("       %s", fullAddress)
+
+		// Geocode the address
+		result := geocode.GeocodeAddress(fullAddress)
+
+		if result.Error != nil {
+			log.Printf("       ✗ Failed: %v", result.Error)
+			// Update attempted timestamp
+			db.Exec("UPDATE quilt_shops SET geocode_attempted_at = ? WHERE id = ?", time.Now(), shop.ID)
+			continue
+		}
+
+		// Update database with coordinates
+		_, err := db.Exec(`
+			UPDATE quilt_shops
+			SET latitude = ?, longitude = ?, geocode_attempted_at = ?
+			WHERE id = ?
+		`, result.Coords.Latitude, result.Coords.Longitude, time.Now(), shop.ID)
+
+		if err != nil {
+			log.Printf("       ✗ Failed to update database: %v", err)
+		} else {
+			log.Printf("       ✓ %.4f, %.4f", result.Coords.Latitude, result.Coords.Longitude)
 		}
 	}
 

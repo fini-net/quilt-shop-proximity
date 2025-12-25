@@ -25,7 +25,9 @@
       "Bash(just city-va:*)",
       "Bash(just clean-va:*)",
       "Bash(just stats-va:*)",
-      "Bash(pdftotext:*)"
+      "Bash(pdftotext:*)",
+      "Bash(go mod graph:*)",
+      "Bash(go mod tidy:*)"
     ],
     "deny": [],
     "ask": []
