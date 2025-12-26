@@ -43,3 +43,7 @@ go.work.sum
 
 # tasks for this repo are in github actions
 /TODO.md
+
+# Godot 4+ specific ignores
+.godot/
+/android/
