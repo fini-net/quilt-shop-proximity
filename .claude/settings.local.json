@@ -32,7 +32,8 @@
       "Bash(just clean-va:*)",
       "Bash(just stats-va:*)",
       "Bash(just merge-databases:*)",
-      "Bash(just stats-merged:*)"
+      "Bash(just stats-merged:*)",
+      "Bash(shasum:*)"
     ],
     "deny": [],
     "ask": []
