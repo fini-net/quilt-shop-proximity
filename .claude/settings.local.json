@@ -10,9 +10,15 @@
       "WebFetch(domain:ronatheribbiter.com)",
       "WebSearch",
       "Bash(markdownlint-cli2:*)",
+      "Bash(pdftotext:*)",
       "Bash(gh pr view:*)",
       "Bash(gh pr diff:*)",
+      "Bash(gh label:*)",
+      "Bash(gh issue create:*)",
+      "Bash(gh issue view:*)",
       "Bash(git log:*)",
+      "Bash(go mod graph:*)",
+      "Bash(go mod tidy:*)",
       "Bash(identify:*)",
       "Bash(just shellcheck:*)",
       "Bash(just claude_review:*)",
@@ -25,9 +31,8 @@
       "Bash(just city-va:*)",
       "Bash(just clean-va:*)",
       "Bash(just stats-va:*)",
-      "Bash(pdftotext:*)",
-      "Bash(go mod graph:*)",
-      "Bash(go mod tidy:*)"
+      "Bash(just merge-databases:*)",
+      "Bash(just stats-merged:*)"
     ],
     "deny": [],
     "ask": []

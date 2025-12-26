@@ -84,6 +84,11 @@ geocode-va:
 [group('geocode')]
 geocode-all: geocode-ca geocode-va
 
+# merge CA and VA databases into single unified database (only shops with coordinates)
+[group('build')]
+merge-databases:
+	cd merge && go run main.go
+
 # show geocoding statistics for California
 [group('geocode')]
 geocode-stats-ca:
@@ -95,3 +100,18 @@ geocode-stats-ca:
 geocode-stats-va:
 	@echo "{{BLUE}}Geocoding statistics (Virginia):{{NORMAL}}"
 	@sqlite3 shops-in-virginia/quilt_shops.db "SELECT COUNT(*) as total, SUM(CASE WHEN latitude IS NOT NULL THEN 1 ELSE 0 END) as geocoded, SUM(CASE WHEN latitude IS NULL AND geocode_attempted_at IS NOT NULL THEN 1 ELSE 0 END) as failed FROM quilt_shops;" -header -column
+
+# query the merged database to show shop count by state
+[group('query')]
+stats-merged:
+	@echo "{{BLUE}}Quilt shops by state (merged database):{{NORMAL}}"
+	@sqlite3 merge/quilt_shops.db "SELECT state, COUNT(*) as count FROM quilt_shops GROUP BY state ORDER BY state;" -header -column
+	@echo ""
+	@echo "{{BLUE}}Total shops with coordinates:{{NORMAL}}"
+	@sqlite3 merge/quilt_shops.db "SELECT COUNT(*) as total FROM quilt_shops;" -header -column
+
+# show all shops in a specific city (merged database)
+[group('query')]
+city-merged CITY:
+	@echo "{{BLUE}}Quilt shops in {{CITY}} (merged database):{{NORMAL}}"
+	@sqlite3 merge/quilt_shops.db "SELECT name, address, city, state, phone, email, website FROM quilt_shops WHERE city = '{{CITY}}';" -header -column
