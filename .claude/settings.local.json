@@ -19,6 +19,7 @@
       "Bash(git log:*)",
       "Bash(go mod graph:*)",
       "Bash(go mod tidy:*)",
+      "Bash(go test:*)",
       "Bash(identify:*)",
       "Bash(just shellcheck:*)",
       "Bash(just claude_review:*)",
