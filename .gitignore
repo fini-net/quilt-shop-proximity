@@ -5,7 +5,6 @@
 *.exe
 *.exe~
 *.dll
-*.so
 *.dylib
 hugo.linux
 hugo.darwin
