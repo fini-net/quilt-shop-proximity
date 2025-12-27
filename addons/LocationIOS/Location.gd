@@ -96,7 +96,7 @@ func AskLocationPermission() -> void:
 	get_plugin().AskLocationAccess()
 
 func ShowLocationPermissionAppeal() -> void:
-	get_plugin().ShowLocationAlert("Locatoin Access",
+	get_plugin().ShowLocationAlert("Location Access",
 	"Please enable location access from settings to allow "+ ProjectSettings.get_setting("application/config/name") +" to provide location-based features and services")
 	
 
