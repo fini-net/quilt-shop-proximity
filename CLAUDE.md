@@ -65,12 +65,18 @@ The production database (`data/quilt_shops.db`) only contains shops with success
 
 ## Development Workflow
 
-All development uses `just` recipes from the repository root.
+All development uses `just` recipes from the repository root. The justfile imports additional recipes from:
+
+- `.just/compliance.just` - Code compliance and linting tasks
+- `.just/gh-process.just` - GitHub workflow automation
+- `.just/pr-hook.just` - Pull request automation
+- `.just/shellcheck.just` - Shell script linting
 
 ### California Shops Workflow
 
 ```bash
 just deps-ca              # Download Go dependencies
+just build-ca             # Build binary (quilt-shop-scraper)
 just scrape-ca            # Scrape ronatheribbiter.com
 just geocode-ca           # Add GPS coordinates via Nominatim
 just stats-ca             # Show shop count by city
@@ -156,10 +162,32 @@ shasum -a 256 -c data/quilt_shops.db.sha256  # Verify database integrity
 
 ### Godot Application
 
-- Godot 4.5 project configured for mobile (1125x2000 viewport)
-- Currently skeleton only - no implementation yet
-- Intended to read from `data/quilt_shops.db` for proximity analysis
+- Godot 4.5 project configured for mobile (1125x2000 viewport, fullscreen mode 3)
+- Uses mobile rendering method for optimal performance on iOS devices
+- **Enabled plugins**:
+  - `godot-sqlite` (v4.6) - SQLite database access for reading `data/quilt_shops.db`
+  - `LocationIOS` (v1.0) - iOS location services with permission handling
+- **Database integration**: Uses SQLite plugin to query production database at `res://data/quilt_shops.db`
+- **Test scripts**:
+  - `test_database.gd` - Runtime database query tests (attach to scene node)
+  - `test_database_editor.gd` - Editor script for testing database queries in Godot editor
 - Project file: `project.godot`
+
+### Godot Development Workflow
+
+To test database queries in the Godot editor:
+
+```bash
+# Run from Godot editor: File > Run > test_database_editor.gd
+# Or attach test_database.gd to a Node in a scene and run the scene
+```
+
+The test scripts verify:
+
+- Total shop count
+- Shop counts by state
+- Sample shop data with coordinates
+- City-specific queries
 
 ## Common Development Patterns
 
