@@ -97,5 +97,7 @@
 .gitignore     export-ignore
 .gitkeep       export-ignore
 
+*.plist text eol=lf
+
 # Normalize EOL for all files that Git considers text files.
 * text=auto eol=lf

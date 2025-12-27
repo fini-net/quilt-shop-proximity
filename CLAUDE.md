@@ -16,7 +16,7 @@ This is a monorepo with three main components:
 
 ### Data Flow
 
-```
+```text
 shops-in-california/     shops-in-virginia/
        ↓                        ↓
     scrape                   scrape
