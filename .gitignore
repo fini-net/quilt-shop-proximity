@@ -4,10 +4,16 @@
 # Binaries for programs and plugins
 *.exe
 *.exe~
+*.so
 *.dll
 *.dylib
 hugo.linux
 hugo.darwin
+
+# But allow platform binaries in Godot addons
+!addons/**/*.dll
+!addons/**/*.dylib
+!addons/**/*.so
 
 # Test binary, built with `go test -c`
 *.test
