@@ -14,6 +14,10 @@ config/name="Quilt Shop Proximity"
 config/features=PackedStringArray("4.5", "Mobile")
 config/icon="res://icon.svg"
 
+[autoload]
+
+DatabaseManager="*res://scripts/database_manager.gd"
+
 [display]
 
 window/size/viewport_width=1125

@@ -1,0 +1,15 @@
+# .repo.toml
+
+[about]
+description = "Quilt Shop Proximity lets you know when you are close to a quilt shop."
+topics = ["godot-application", "ios-app", "quilting"]
+
+[urls]
+git_ssh = "git@github.com:fini-net/quilt-shop-proximity.git"
+web_url = "https://github.com/fini-net/quilt-shop-proximity"
+
+[flags]
+claude = false
+claude-review = false
+copilot-review = false
+standard-release = true
