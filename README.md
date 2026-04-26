@@ -1,5 +1,6 @@
 # quilt-shop-proximity
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/fini-net/quilt-shop-proximity/badge)](https://scorecard.dev/viewer/?uri=github.com/fini-net/quilt-shop-proximity)
 ![GitHub Issues](https://img.shields.io/github/issues/fini-net/quilt-shop-proximity)
 ![GitHub Pull Requests](https://img.shields.io/github/issues-pr/fini-net/quilt-shop-proximity)
 ![GitHub License](https://img.shields.io/github/license/fini-net/quilt-shop-proximity)
